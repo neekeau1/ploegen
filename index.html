@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Ploegenrooster</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            <body>
+    <noscript>
+        <p style="color: red; text-align: center; padding: 20px; font-weight: bold;">
+            Let op: De standaard Android HTML Viewer blokkeert JavaScript voor losse bestanden. 
+            Open dit bestand in de gebouwde APK-app om het rooster te laden!
+        </p>
+    </noscript>
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 460px;
+            background: #ffffff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            margin-bottom: 16px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        th {
+            background-color: #2c3e50;
+            color: #ffffff;
+            padding: 12px 6px;
+            font-size: 16px;
+            text-align: center;
+        }
+        th a {
+            color: #ffffff;
+            text-decoration: none;
+            padding: 4px 10px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+        }
+        td {
+            padding: 9px 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 15px;
+        }
+        td:first-child {
+            width: 35px;
+            text-align: right;
+            font-weight: bold;
+            padding-right: 16px;
+        }
+        /* Kleuren per dienst */
+        .shift-ochtend { background-color: #fff9c4; } /* Lichtgeel */
+        .shift-middag  { background-color: #ffe0b2; } /* Lichtoranje */
+        .shift-nacht   { background-color: #bbdefb; } /* Lichtblauw */
+        .shift-vrij    { background-color: #e8f5e9; color: #555; } /* Lichtgroen */
+        
+        /* Markering voor vandaag */
+        .today {
+            outline: 2px solid #d32f2f;
+            outline-offset: -2px;
+            font-weight: bold;
+        }
+        .quick-months td {
+            width: 50%;
+            text-align: center;
+            padding: 10px;
+            font-weight: normal;
+        }
+        .quick-months a {
+            color: #1a73e8;
+            text-decoration: none;
+            cursor: pointer;
+            display: block;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <table id="calendar-table">
+        <thead>
+            <tr id="header-nav"></tr>
+        </thead>
+        <tbody id="calendar-body"></tbody>
+        <tfoot>
+            <tr id="footer-nav"></tr>
+        </tfoot>
+    </table>
+
+    <table class="quick-months">
+        <tbody id="quick-months-body"></tbody>
+    </table>
+
+    <script>
+        // Rooster configuratie uit jouw URL: s=O,O,M,M,N,N,,,, & d=09/05/2011
+        const shifts = [
+            "ochtend", "ochtend", 
+            "middag", "middag", 
+            "nacht", "nacht", 
+            "vrij", "vrij", "vrij", "vrij"
+        ];
+        // 9 mei 2011 (maand is 0-indexed in JS, dus 4 = mei)
+        const baseDateUTC = Date.UTC(2011, 4, 9);
+
+        const monthNames = [
+            "januari", "februari", "maart", "april", "mei", "juni",
+            "juli", "augustus", "september", "oktober", "november", "december"
+        ];
+        const dayNames = [
+            "zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"
+        ];
+
+        let currentOffset = 0;
+
+        function changeMonth(delta) {
+            currentOffset += delta;
+            renderCalendar();
+            window.scrollTo(0, 0);
+        }
+
+        function resetMonth() {
+            currentOffset = 0;
+            renderCalendar();
+            window.scrollTo(0, 0);
+        }
+
+        function getShift(year, month, day) {
+            const targetUTC = Date.UTC(year, month, day);
+            const diffDays = Math.round((targetUTC - baseDateUTC) / (1000 * 60 * 60 * 24));
+            const index = ((diffDays % shifts.length) + shifts.length) % shifts.length;
+            return shifts[index];
+        }
+
+        function renderCalendar() {
+            const now = new Date();
+            const targetDate = new Date(now.getFullYear(), now.getMonth() + currentOffset, 1);
+            const year = targetDate.getFullYear();
+            const month = targetDate.getMonth();
+
+            const navHtml = `
+                <th colspan="2">
+                    <a onclick="changeMonth(-12)">&lt;&lt;</a>
+                    <a onclick="changeMonth(-1)">&lt;</a>
+                    <a onclick="resetMonth()">${monthNames[month]} ${year}</a>
+                    <a onclick="changeMonth(1)">&gt;</a>
+                    <a onclick="changeMonth(12)">&gt;&gt;</a>
+                </th>
+            `;
+            document.getElementById("header-nav").innerHTML = navHtml;
+            document.getElementById("footer-nav").innerHTML = navHtml;
+
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            let bodyHtml = "";
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateObj = new Date(year, month, day);
+                const dayName = dayNames[dateObj.getDay()];
+                const shift = getShift(year, month, day);
+
+                const isToday = (
+                    day === now.getDate() && 
+                    month === now.getMonth() && 
+                    year === now.getFullYear()
+                );
+
+                bodyHtml += `
+                    <tr class="shift-${shift} ${isToday ? 'today' : ''}">
+                        <td>${day}</td>
+                        <td>${dayName} - ${shift}</td>
+                    </tr>
+                `;
+            }
+            document.getElementById("calendar-body").innerHTML = bodyHtml;
+
+            // Snelkoppelingen voor de komende 12 maanden onderaan (net als op de site)
+            let quickHtml = "";
+            for (let i = 1; i <= 6; i++) {
+                const leftDate = new Date(year, month + i, 1);
+                const rightDate = new Date(year, month + i + 6, 1);
+
+                quickHtml += `
+                    <tr>
+                        <td><a onclick="changeMonth(${i})">${monthNames[leftDate.getMonth()]} ${leftDate.getFullYear()}</a></td>
+                        <td><a onclick="changeMonth(${i + 6})">${monthNames[rightDate.getMonth()]} ${rightDate.getFullYear()}</a></td>
+                    </tr>
+                `;
+            }
+            document.getElementById("quick-months-body").innerHTML = quickHtml;
+        }
+
+        renderCalendar();
+    </script>
+</body>
+</html>
