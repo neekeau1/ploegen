@@ -63,6 +63,7 @@
             transition: background-color 0.2s, color 0.2s;
         }
 
+        /* Header */
         .top-bar {
             display: flex;
             justify-content: space-between;
@@ -76,6 +77,7 @@
             font-size: 18px;
             font-weight: bold;
             color: var(--text-color);
+            margin: 0;
         }
 
         .icon-btn {
@@ -90,6 +92,7 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
+        /* Ploeg selectie */
         .team-selector {
             display: flex;
             justify-content: space-between;
@@ -125,7 +128,7 @@
             background-color: #3b536b;
         }
 
-        /* Stats & Info Flyout balk (exact dezelfde tekstgrootte: 12px) */
+        /* Statistieken, Aftelklok & Info-paneel */
         .info-wrapper {
             width: 100%;
             max-width: 460px;
@@ -141,6 +144,14 @@
             font-size: 12px;
             color: var(--muted-text);
             padding: 2px 4px;
+            gap: 6px;
+        }
+
+        .countdown-bar {
+            width: 100%;
+            font-size: 12px;
+            color: var(--muted-text);
+            padding: 0 4px 2px 4px;
         }
 
         .info-toggle {
@@ -153,6 +164,7 @@
             font-weight: bold;
             cursor: pointer;
             user-select: none;
+            flex-shrink: 0;
         }
 
         .info-flyout {
@@ -180,6 +192,7 @@
             margin-bottom: 0;
         }
 
+        /* Kalendertabel */
         table {
             border-collapse: collapse;
             width: 100%;
@@ -199,13 +212,15 @@
             text-align: center;
         }
 
-        th a {
+        .nav-btn {
+            background: transparent;
+            border: none;
             color: var(--header-text);
-            text-decoration: none;
             padding: 4px 8px;
+            font-size: 15px;
             font-weight: bold;
             cursor: pointer;
-            user-select: none;
+            font-family: inherit;
         }
 
         td {
@@ -378,7 +393,7 @@
             text-align: center;
         }
 
-        /* Modal voor Verlof / Overwerk / Notities */
+        /* Dialoogvenster voor aantekeningen */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -443,70 +458,86 @@
             justify-content: flex-end;
             gap: 8px;
         }
+
+        /* Alleen zichtbaar voor schermlezers zoals TalkBack */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
     </style>
     <script defer src="https://cloud.umami.is/script.js" data-website-id="ffeccc9a-fcd8-45b0-a0c2-c7d14e1ffde6"></script>
 </head>
 <body>
 
-    <div class="top-bar">
-        <div class="app-title">Ploegenrooster</div>
-        <button class="icon-btn" id="theme-btn" onclick="toggleDarkMode()">Donker</button>
-    </div>
+    <header class="top-bar">
+        <h1 class="app-title">Ploegenrooster</h1>
+        <button class="icon-btn" id="theme-btn" onclick="toggleDarkMode()" aria-label="Wissel tussen lichte en donkere weergave">Donker</button>
+    </header>
 
-    <div class="team-selector">
-        <button class="team-btn" id="btn-A" onclick="selectTeam('A', true)">Ploeg A</button>
-        <button class="team-btn" id="btn-B" onclick="selectTeam('B', true)">Ploeg B</button>
-        <button class="team-btn" id="btn-C" onclick="selectTeam('C', true)">Ploeg C</button>
-        <button class="team-btn" id="btn-D" onclick="selectTeam('D', true)">Ploeg D</button>
-        <button class="team-btn" id="btn-E" onclick="selectTeam('E', true)">Ploeg E</button>
-    </div>
+    <nav class="team-selector" aria-label="Kies een ploeg">
+        <button class="team-btn" id="btn-A" onclick="selectTeam('A', true)" aria-label="Toon rooster van Ploeg A">Ploeg A</button>
+        <button class="team-btn" id="btn-B" onclick="selectTeam('B', true)" aria-label="Toon rooster van Ploeg B">Ploeg B</button>
+        <button class="team-btn" id="btn-C" onclick="selectTeam('C', true)" aria-label="Toon rooster van Ploeg C, de ploeg van Nikolai">Ploeg C</button>
+        <button class="team-btn" id="btn-D" onclick="selectTeam('D', true)" aria-label="Toon rooster van Ploeg D">Ploeg D</button>
+        <button class="team-btn" id="btn-E" onclick="selectTeam('E', true)" aria-label="Toon rooster van Ploeg E">Ploeg E</button>
+    </nav>
 
-    <div class="info-wrapper">
+    <section class="info-wrapper" aria-label="Statistieken en informatie">
         <div class="stats-bar">
             <span id="stats-summary"></span>
-            <button class="info-toggle" onclick="toggleInfoFlyout()">Info</button>
+            <button class="info-toggle" id="info-btn" onclick="toggleInfoFlyout()" aria-expanded="false" aria-controls="info-flyout" aria-label="Open informatie en privacyverklaring">Info</button>
         </div>
-        <div class="info-flyout" id="info-flyout">
+        <div class="countdown-bar" id="countdown-text" aria-live="polite"></div>
+        <div class="info-flyout" id="info-flyout" role="region" aria-label="Informatie en privacy">
             <p id="flyout-year-stats"></p>
             <p><strong>Bediening:</strong> Tik op een dag in het rooster om te zien welke dienst alle andere ploegen die dag hebben. Gebruik de <strong>+</strong> knop achter een datum om verlof, overwerk, een dienst-ruil of een notitie toe te voegen.</p>
-            <p><strong>Privacy &amp; Opslag:</strong> Alle vrije dagen, overwerk en notities die je aanvinkt worden uitsluitend lokaal op je eigen apparaat opgeslagen. Deze gegevens blijven bewaard zolang je geen cookies of sitedata van je browser wist.</p>
+            <p><strong>Lokale opslag:</strong> Alle vrije dagen, overwerk en notities die je aanvinkt worden uitsluitend lokaal in je eigen browser opgeslagen. Deze gegevens blijven bewaard zolang je geen cookies of sitedata van je browser wist. De beheerder van deze website heeft hier geen toegang toe.</p>
+            <p><strong>Privacyverklaring:</strong> Deze website plaatst geen tracking-cookies en slaat geen persoonsgegevens op. Voor de technische levering van de website verwerkt de hostingprovider (GitHub Pages) standaard verbindingsgegevens zoals het IP-adres. Daarnaast worden volledig geanonimiseerde bezoekersaantallen gemeten (paginaweergaven, apparaattype en land) zonder gebruik van cookies of opslag van IP-adressen, waardoor bezoekers niet herleidbaar zijn.</p>
         </div>
-    </div>
+    </section>
 
-    <table id="calendar-table">
-        <thead>
-            <tr id="header-nav"></tr>
-        </thead>
-        <tbody id="calendar-body"></tbody>
-        <tfoot>
-            <tr id="footer-nav"></tr>
-        </tfoot>
-    </table>
+    <main style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+        <table id="calendar-table" aria-label="Maandoverzicht ploegenrooster">
+            <thead>
+                <tr id="header-nav"></tr>
+            </thead>
+            <tbody id="calendar-body"></tbody>
+            <tfoot>
+                <tr id="footer-nav"></tr>
+            </tfoot>
+        </table>
 
-    <div class="actions-bar">
-        <button class="action-btn" onclick="exportICS('month')">Exporteer Maand (.ics)</button>
-        <button class="action-btn" onclick="exportICS('year')">Exporteer Jaar (.ics)</button>
-    </div>
+        <div class="actions-bar">
+            <button class="action-btn" onclick="exportICS('month')" aria-label="Exporteer de huidige maand als agendabestand">Exporteer Maand (.ics)</button>
+            <button class="action-btn" onclick="exportICS('year')" aria-label="Exporteer het volledige jaar als agendabestand">Exporteer Jaar (.ics)</button>
+        </div>
 
-    <table class="quick-months">
-        <tbody id="quick-months-body"></tbody>
-    </table>
+        <table class="quick-months" aria-label="Snelkoppelingen naar komende maanden">
+            <tbody id="quick-months-body"></tbody>
+        </table>
+    </main>
 
-    <div class="footer">
+    <footer class="footer">
         5-Ploegenrooster van <strong>Nikolai</strong>
-    </div>
+    </footer>
 
-    <!-- Modal voor eigen aantekening / verlof -->
-    <div class="modal-overlay" id="note-modal">
+    <div class="modal-overlay" id="note-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal">
             <h3 id="modal-title">Dag aanpassen</h3>
             <div class="modal-options">
-                <button class="opt-btn" id="opt-verlof" onclick="setNoteType('verlof')">Verlof / Vrij</button>
-                <button class="opt-btn" id="opt-overwerk" onclick="setNoteType('overwerk')">Overwerk</button>
-                <button class="opt-btn" id="opt-ruil" onclick="setNoteType('ruil')">Dienst geruild</button>
-                <button class="opt-btn" id="opt-geen" onclick="setNoteType('')">Wissen</button>
+                <button class="opt-btn" id="opt-verlof" onclick="setNoteType('verlof')" aria-pressed="false">Verlof / Vrij</button>
+                <button class="opt-btn" id="opt-overwerk" onclick="setNoteType('overwerk')" aria-pressed="false">Overwerk</button>
+                <button class="opt-btn" id="opt-ruil" onclick="setNoteType('ruil')" aria-pressed="false">Dienst geruild</button>
+                <button class="opt-btn" id="opt-geen" onclick="setNoteType('')" aria-pressed="false">Wissen</button>
             </div>
-            <input type="text" id="note-input" placeholder="Optionele notitie (bijv. Tandarts / Vakantie)">
+            <input type="text" id="note-input" aria-label="Optionele notitie" placeholder="Optionele notitie (bijv. Tandarts / Vakantie)">
             <div class="modal-actions">
                 <button class="icon-btn" onclick="closeModal()">Annuleren</button>
                 <button class="icon-btn" style="background: #1a73e8; color: #fff;" onclick="saveModalNote()">Opslaan</button>
@@ -522,7 +553,13 @@
             "vrij", "vrij", "vrij", "vrij"
         ];
 
-        // Startdatums 1e ochtenddienst oktober 2026 (maand 9 = oktober)
+        // Diensttijden voor de aftelklok (Ochtend: 06-14u, Middag: 14-22u, Nacht: 22-06u)
+        const SHIFT_HOURS = {
+            ochtend: { start: 6, duration: 8 },
+            middag:  { start: 14, duration: 8 },
+            nacht:   { start: 22, duration: 8 }
+        };
+
         const teamBaseDates = {
             'E': Date.UTC(2026, 9, 1),
             'A': Date.UTC(2026, 9, 3),
@@ -544,7 +581,7 @@
         let activeModalDateKey = null;
         let selectedNoteType = '';
 
-        // 1. Dark Mode beheer
+        // Thema-instellingen
         function initTheme() {
             const saved = localStorage.getItem('nikolai_theme');
             if (saved === 'dark') {
@@ -561,10 +598,13 @@
         }
 
         function toggleInfoFlyout() {
-            document.getElementById('info-flyout').classList.toggle('open');
+            const flyout = document.getElementById('info-flyout');
+            const btn = document.getElementById('info-btn');
+            const isOpen = flyout.classList.toggle('open');
+            btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         }
 
-        // 2. Ploeg detecteren uit URL (/A, /B, /C, /D, /E)
+        // Ploegselectie en URL-herkenning
         function detectTeamFromUrl() {
             const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toUpperCase();
             const hash = window.location.hash.replace('#', '').toUpperCase();
@@ -580,8 +620,11 @@
 
         function selectTeam(team, updateUrl = false) {
             currentTeam = team;
-            document.querySelectorAll('.team-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('btn-' + team).classList.add('active');
+            document.querySelectorAll('.team-btn').forEach(btn => {
+                const isSelected = btn.id === 'btn-' + team;
+                btn.classList.toggle('active', isSelected);
+                btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+            });
             document.title = `Ploegenrooster - Ploeg ${team}`;
 
             if (updateUrl && window.location.protocol.startsWith('http')) {
@@ -589,9 +632,10 @@
                 window.history.replaceState({ team: team }, '', newPath);
             }
             renderCalendar();
+            updateCountdown();
         }
 
-        // 3. Dienst berekening voor willekeurige ploeg
+        // Dienstberekening
         function getShiftForTeam(team, year, month, day) {
             const targetUTC = Date.UTC(year, month, day);
             const baseDateUTC = teamBaseDates[team];
@@ -600,7 +644,69 @@
             return shifts[index];
         }
 
-        // 4. ISO Weeknummer berekenen
+        // Aftelklok op basis van lokale tijd van de bezoeker
+        function updateCountdown() {
+            const el = document.getElementById('countdown-text');
+            if (!el) return;
+
+            const now = new Date();
+            const notes = getNotes();
+            const intervals = [];
+
+            for (let offset = -1; offset <= 14; offset++) {
+                const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+                const y = d.getFullYear();
+                const m = d.getMonth();
+                const day = d.getDate();
+                const dateKey = `${y}-${m}-${day}`;
+
+                // Sla de dienst over als deze dag als verlof is gemarkeerd
+                if (notes[dateKey] && notes[dateKey].type === 'verlof') continue;
+
+                const shift = getShiftForTeam(currentTeam, y, m, day);
+                if (SHIFT_HOURS[shift]) {
+                    const start = new Date(y, m, day, SHIFT_HOURS[shift].start, 0, 0);
+                    const end = new Date(start.getTime() + SHIFT_HOURS[shift].duration * 3600000);
+                    intervals.push({ start, end });
+                }
+            }
+
+            let targetTime = null;
+            let statusLabel = '';
+
+            for (const iv of intervals) {
+                if (now >= iv.start && now < iv.end) {
+                    targetTime = iv.end;
+                    statusLabel = 'Vrij in';
+                    break;
+                } else if (iv.start > now) {
+                    targetTime = iv.start;
+                    statusLabel = 'Werken in';
+                    break;
+                }
+            }
+
+            if (!targetTime) {
+                el.innerHTML = '';
+                return;
+            }
+
+            const totalMinutes = Math.max(1, Math.ceil((targetTime - now) / 60000));
+            const days = Math.floor(totalMinutes / (60 * 24));
+            const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+            const mins = totalMinutes % 60;
+
+            let timeString = '';
+            if (days > 0) {
+                timeString = `${days} ${days === 1 ? 'dag' : 'dagen'}, ${hours} uur en ${mins} minuten`;
+            } else {
+                timeString = `${hours} uur en ${mins} minuten`;
+            }
+
+            el.innerHTML = `${statusLabel} <strong>${timeString}</strong>`;
+        }
+
+        // ISO-weeknummer
         function getISOWeek(y, m, d) {
             const date = new Date(Date.UTC(y, m, d));
             const dayNum = date.getUTCDay() || 7;
@@ -609,7 +715,7 @@
             return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
         }
 
-        // 5. Nederlandse Feestdagen berekenen
+        // Nederlandse feestdagen
         const holidayCache = {};
         function getHolidaysForYear(year) {
             if (holidayCache[year]) return holidayCache[year];
@@ -655,7 +761,7 @@
             return map;
         }
 
-        // 6. Verlof & Notities in LocalStorage
+        // Beheer van lokale notities en verlof
         function getNotes() {
             try {
                 return JSON.parse(localStorage.getItem('nikolai_notes') || '{}');
@@ -678,7 +784,11 @@
             selectedNoteType = type;
             ['verlof', 'overwerk', 'ruil', 'geen'].forEach(t => {
                 const btn = document.getElementById('opt-' + t);
-                if (btn) btn.classList.toggle('selected', (t === type) || (t === 'geen' && type === ''));
+                if (btn) {
+                    const isSelected = (t === type) || (t === 'geen' && type === '');
+                    btn.classList.toggle('selected', isSelected);
+                    btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+                }
             });
         }
 
@@ -697,11 +807,23 @@
             localStorage.setItem('nikolai_notes', JSON.stringify(notes));
             closeModal();
             renderCalendar();
+            updateCountdown();
         }
 
         function toggleDayDetails(day) {
             const row = document.getElementById(`detail-${day}`);
-            if (row) row.classList.toggle('open');
+            const mainRow = document.getElementById(`row-${day}`);
+            if (row) {
+                const isOpen = row.classList.toggle('open');
+                if (mainRow) mainRow.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            }
+        }
+
+        function handleRowKey(event, day) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                toggleDayDetails(day);
+            }
         }
 
         function changeMonth(delta) {
@@ -716,7 +838,7 @@
             window.scrollTo(0, 0);
         }
 
-        // 7. Kalender opbouwen
+        // Opbouw van de kalender
         function renderCalendar() {
             const now = new Date();
             const targetDate = new Date(now.getFullYear(), now.getMonth() + currentOffset, 1);
@@ -743,11 +865,11 @@
 
             const navHtml = `
                 <th colspan="2">
-                    <a onclick="changeMonth(-12)">&lt;&lt;</a>
-                    <a onclick="changeMonth(-1)">&lt;</a>
-                    <a onclick="resetMonth()">${monthNames[month]} ${year} (Ploeg ${currentTeam})</a>
-                    <a onclick="changeMonth(1)">&gt;</a>
-                    <a onclick="changeMonth(12)">&gt;&gt;</a>
+                    <button type="button" class="nav-btn" onclick="changeMonth(-12)" aria-label="Vorig jaar">&lt;&lt;</button>
+                    <button type="button" class="nav-btn" onclick="changeMonth(-1)" aria-label="Vorige maand">&lt;</button>
+                    <button type="button" class="nav-btn" onclick="resetMonth()" aria-label="${monthNames[month]} ${year}, Ploeg ${currentTeam}. Tik om terug te keren naar de huidige maand">${monthNames[month]} ${year} (Ploeg ${currentTeam})</button>
+                    <button type="button" class="nav-btn" onclick="changeMonth(1)" aria-label="Volgende maand">&gt;</button>
+                    <button type="button" class="nav-btn" onclick="changeMonth(12)" aria-label="Volgend jaar">&gt;&gt;</button>
                 </th>
             `;
             document.getElementById("header-nav").innerHTML = navHtml;
@@ -771,21 +893,41 @@
 
                 let weekBadge = "";
                 if (dayOfWeek === 1 || day === 1) {
-                    weekBadge = `<span class="badge">Week${getISOWeek(year, month, day)}</span>`;
+                    weekBadge = `<span class="badge" aria-hidden="true">Week ${getISOWeek(year, month, day)}</span>`;
                 }
 
                 let holidayBadge = "";
                 if (holidays[dateKey]) {
-                    holidayBadge = `<span class="badge badge-holiday">${holidays[dateKey]}</span>`;
+                    holidayBadge = `<span class="badge badge-holiday" aria-hidden="true">${holidays[dateKey]}</span>`;
                 }
 
                 let noteBadge = "";
+                let srNoteText = "";
                 if (notes[dateKey]) {
                     const n = notes[dateKey];
                     const typeLabel = n.type === 'verlof' ? 'Verlof' : n.type === 'overwerk' ? 'Overwerk' : n.type === 'ruil' ? 'Geruild' : 'Notitie';
                     const label = n.text ? (n.type ? `${typeLabel}: ${n.text}` : n.text) : typeLabel;
-                    noteBadge = `<span class="badge badge-note">${label}</span>`;
+                    noteBadge = `<span class="badge badge-note" aria-hidden="true">${label}</span>`;
+                    srNoteText = `, ${label}`;
                 }
+
+                // Schermlezer-tekst (TalkBack): bij Ploeg C specifiek "Nikolai heeft ..." voorlezen
+                let srShiftPhrase = "";
+                if (currentTeam === 'C') {
+                    if (notes[dateKey] && notes[dateKey].type === 'verlof') {
+                        srShiftPhrase = "Nikolai heeft verlof";
+                    } else if (shift === 'vrij') {
+                        srShiftPhrase = "Nikolai is vrij";
+                    } else {
+                        srShiftPhrase = `Nikolai heeft ${shift}dienst`;
+                    }
+                } else {
+                    srShiftPhrase = shift === 'vrij' ? `Ploeg ${currentTeam} is vrij` : `Ploeg ${currentTeam} heeft ${shift}dienst`;
+                }
+
+                const srTodayPrefix = isToday ? "Vandaag, " : "";
+                const srHolidayText = holidays[dateKey] ? `, ${holidays[dateKey]}` : "";
+                const srFullText = `${srTodayPrefix}${day} ${monthNames[month]}, ${dayName}: ${srShiftPhrase}${srHolidayText}${srNoteText}.`;
 
                 const byShift = { ochtend: [], middag: [], nacht: [], vrij: [] };
                 ['A', 'B', 'C', 'D', 'E'].forEach(t => {
@@ -793,17 +935,18 @@
                 });
 
                 bodyHtml += `
-                    <tr class="day-row shift-${shift} ${isToday ? 'today' : ''}" onclick="toggleDayDetails(${day})">
-                        <td class="day-num-cell">${day}</td>
+                    <tr class="day-row shift-${shift} ${isToday ? 'today' : ''}" id="row-${day}" tabindex="0" role="button" aria-expanded="false" onclick="toggleDayDetails(${day})" onkeydown="handleRowKey(event, ${day})">
+                        <td class="day-num-cell"><span aria-hidden="true">${day}</span></td>
                         <td>
+                            <span class="sr-only">${srFullText}</span>
                             <div class="shift-cell">
-                                <div class="shift-info">
+                                <div class="shift-info" aria-hidden="true">
                                     <span>${dayName} - <strong>${shift}</strong></span>
                                     ${weekBadge}
                                     ${holidayBadge}
                                     ${noteBadge}
                                 </div>
-                                <button class="edit-btn" title="Verlof of notitie" onclick="openModal(event, ${year}, ${month}, ${day})">+</button>
+                                <button type="button" class="edit-btn" aria-label="Aanpassen of notitie toevoegen voor ${day} ${monthNames[month]}" onclick="openModal(event, ${year}, ${month}, ${day})">+</button>
                             </div>
                         </td>
                     </tr>
@@ -828,17 +971,19 @@
             for (let i = 1; i <= 6; i++) {
                 const leftDate = new Date(year, month + i, 1);
                 const rightDate = new Date(year, month + i + 6, 1);
+                const leftLabel = `${monthNames[leftDate.getMonth()]} ${leftDate.getFullYear()}`;
+                const rightLabel = `${monthNames[rightDate.getMonth()]} ${rightDate.getFullYear()}`;
                 quickHtml += `
                     <tr>
-                        <td><a onclick="changeMonth(${i})">${monthNames[leftDate.getMonth()]} ${leftDate.getFullYear()}</a></td>
-                        <td><a onclick="changeMonth(${i + 6})">${monthNames[rightDate.getMonth()]} ${rightDate.getFullYear()}</a></td>
+                        <td><a role="button" tabindex="0" aria-label="Ga naar ${leftLabel}" onclick="changeMonth(${i})">${leftLabel}</a></td>
+                        <td><a role="button" tabindex="0" aria-label="Ga naar ${rightLabel}" onclick="changeMonth(${i + 6})">${rightLabel}</a></td>
                     </tr>
                 `;
             }
             document.getElementById("quick-months-body").innerHTML = quickHtml;
         }
 
-        // 8. Agenda Export (.ics)
+        // Agenda-export (.ics)
         function exportICS(scope) {
             const now = new Date();
             const targetDate = new Date(now.getFullYear(), now.getMonth() + currentOffset, 1);
@@ -886,7 +1031,7 @@
             link.click();
         }
 
-        // 9. Swipe navigatie op telefoon
+        // Veegnavigatie voor touchscreens
         let touchStartX = 0;
         let touchStartY = 0;
         const tableEl = document.getElementById('calendar-table');
@@ -904,13 +1049,14 @@
             }
         }, { passive: true });
 
-        // 10. Registreer Offline Service Worker
+        // Offline Service Worker registratie
         if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
 
         initTheme();
         selectTeam(detectTeamFromUrl(), false);
+        setInterval(updateCountdown, 30000);
     </script>
 </body>
 </html>
