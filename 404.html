@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Ploegenrooster</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        /* Ploeg knoppen A t/m E */
+        .team-selector {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 460px;
+            margin-bottom: 12px;
+            gap: 6px;
+        }
+        .team-btn {
+            flex: 1;
+            padding: 10px 0;
+            font-size: 15px;
+            font-weight: bold;
+            background-color: #ffffff;
+            color: #2c3e50;
+            border: 2px solid #2c3e50;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .team-btn.active {
+            background-color: #2c3e50;
+            color: #ffffff;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 460px;
+            background: #ffffff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            margin-bottom: 16px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        th {
+            background-color: #2c3e50;
+            color: #ffffff;
+            padding: 12px 6px;
+            font-size: 16px;
+            text-align: center;
+        }
+        th a {
+            color: #ffffff;
+            text-decoration: none;
+            padding: 4px 10px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+        }
+        td {
+            padding: 9px 12px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 15px;
+        }
+        td:first-child {
+            width: 35px;
+            text-align: right;
+            font-weight: bold;
+            padding-right: 16px;
+        }
+        /* Kleuren per dienst */
+        .shift-ochtend { background-color: #fff9c4; } /* Lichtgeel */
+        .shift-middag  { background-color: #ffe0b2; } /* Lichtoranje */
+        .shift-nacht   { background-color: #bbdefb; } /* Lichtblauw */
+        .shift-vrij    { background-color: #e8f5e9; color: #555; } /* Lichtgroen */
+        
+        /* Markering voor vandaag */
+        .today {
+            outline: 2px solid #d32f2f;
+            outline-offset: -2px;
+            font-weight: bold;
+        }
+        .quick-months td {
+            width: 50%;
+            text-align: center;
+            padding: 10px;
+            font-weight: normal;
+        }
+        .quick-months a {
+            color: #1a73e8;
+            text-decoration: none;
+            cursor: pointer;
+            display: block;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="team-selector">
+        <button class="team-btn" id="btn-A" onclick="selectTeam('A', true)">Ploeg A</button>
+        <button class="team-btn" id="btn-B" onclick="selectTeam('B', true)">Ploeg B</button>
+        <button class="team-btn" id="btn-C" onclick="selectTeam('C', true)">Ploeg C</button>
+        <button class="team-btn" id="btn-D" onclick="selectTeam('D', true)">Ploeg D</button>
+        <button class="team-btn" id="btn-E" onclick="selectTeam('E', true)">Ploeg E</button>
+    </div>
+
+    <table id="calendar-table">
+        <thead>
+            <tr id="header-nav"></tr>
+        </thead>
+        <tbody id="calendar-body"></tbody>
+        <tfoot>
+            <tr id="footer-nav"></tr>
+        </tfoot>
+    </table>
+
+    <table class="quick-months">
+        <tbody id="quick-months-body"></tbody>
+    </table>
+
+    <script>
+        const shifts = [
+            "ochtend", "ochtend", 
+            "middag", "middag", 
+            "nacht", "nacht", 
+            "vrij", "vrij", "vrij", "vrij"
+        ];
+
+        // Gecorrigeerde startdatums 1e ochtenddienst in oktober 2026 (maand 9 = oktober)
+        const teamBaseDates = {
+            'E': Date.UTC(2026, 9, 1),  // 1 oktober 2026
+            'A': Date.UTC(2026, 9, 3),  // 3 oktober 2026
+            'B': Date.UTC(2026, 9, 5),  // 5 oktober 2026
+            'C': Date.UTC(2026, 9, 7),  // 7 oktober 2026 (Standaard)
+            'D': Date.UTC(2026, 9, 9)   // 9 oktober 2026
+        };
+
+        let currentTeam = 'C'; // Standaard op Ploeg C
+        let currentOffset = 0;
+
+        const monthNames = [
+            "januari", "februari", "maart", "april", "mei", "juni",
+            "juli", "augustus", "september", "oktober", "november", "december"
+        ];
+        const dayNames = [
+            "zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"
+        ];
+
+        // Controleer bij het laden of er /A, /B, /C, /D of /E in de URL staat
+        function detectTeamFromUrl() {
+            const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toUpperCase();
+            const hash = window.location.hash.replace('#', '').toUpperCase();
+            const query = window.location.search.replace('?', '').toUpperCase();
+
+            // Check het laatste stukje van het pad (bijv. domein.nl/A)
+            const pathParts = path.split('/');
+            const lastPart = pathParts[pathParts.length - 1];
+
+            if (teamBaseDates[lastPart]) return lastPart;
+            if (teamBaseDates[hash]) return hash;
+            if (teamBaseDates[query]) return query;
+            return 'C'; // Geen letter in de URL? Dan altijd Ploeg C!
+        }
+
+        function selectTeam(team, updateUrl = false) {
+            currentTeam = team;
+            document.querySelectorAll('.team-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + team).classList.add('active');
+            document.title = `Ploegenrooster - Ploeg ${team}`;
+
+            // Werk de URL netjes bij naar /A, /B, etc. (en naar / voor standaard Ploeg C)
+            if (updateUrl && window.location.protocol.startsWith('http')) {
+                const newPath = (team === 'C') ? '/' : '/' + team;
+                window.history.replaceState({ team: team }, '', newPath);
+            }
+
+            renderCalendar();
+        }
+
+        function changeMonth(delta) {
+            currentOffset += delta;
+            renderCalendar();
+            window.scrollTo(0, 0);
+        }
+
+        function resetMonth() {
+            currentOffset = 0;
+            renderCalendar();
+            window.scrollTo(0, 0);
+        }
+
+        function getShift(year, month, day) {
+            const targetUTC = Date.UTC(year, month, day);
+            const baseDateUTC = teamBaseDates[currentTeam];
+            const diffDays = Math.round((targetUTC - baseDateUTC) / (1000 * 60 * 60 * 24));
+            const index = ((diffDays % shifts.length) + shifts.length) % shifts.length;
+            return shifts[index];
+        }
+
+        function renderCalendar() {
+            const now = new Date();
+            const targetDate = new Date(now.getFullYear(), now.getMonth() + currentOffset, 1);
+            const year = targetDate.getFullYear();
+            const month = targetDate.getMonth();
+
+            const navHtml = `
+                <th colspan="2">
+                    <a onclick="changeMonth(-12)">&lt;&lt;</a>
+                    <a onclick="changeMonth(-1)">&lt;</a>
+                    <a onclick="resetMonth()">${monthNames[month]} ${year} (Ploeg ${currentTeam})</a>
+                    <a onclick="changeMonth(1)">&gt;</a>
+                    <a onclick="changeMonth(12)">&gt;&gt;</a>
+                </th>
+            `;
+            document.getElementById("header-nav").innerHTML = navHtml;
+            document.getElementById("footer-nav").innerHTML = navHtml;
+
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            let bodyHtml = "";
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateObj = new Date(year, month, day);
+                const dayName = dayNames[dateObj.getDay()];
+                const shift = getShift(year, month, day);
+
+                const isToday = (
+                    day === now.getDate() && 
+                    month === now.getMonth() && 
+                    year === now.getFullYear()
+                );
+
+                bodyHtml += `
+                    <tr class="shift-${shift} ${isToday ? 'today' : ''}">
+                        <td>${day}</td>
+                        <td>${dayName} - ${shift}</td>
+                    </tr>
+                `;
+            }
+            document.getElementById("calendar-body").innerHTML = bodyHtml;
+
+            let quickHtml = "";
+            for (let i = 1; i <= 6; i++) {
+                const leftDate = new Date(year, month + i, 1);
+                const rightDate = new Date(year, month + i + 6, 1);
+
+                quickHtml += `
+                    <tr>
+                        <td><a onclick="changeMonth(${i})">${monthNames[leftDate.getMonth()]} ${leftDate.getFullYear()}</a></td>
+                        <td><a onclick="changeMonth(${i + 6})">${monthNames[rightDate.getMonth()]} ${rightDate.getFullYear()}</a></td>
+                    </tr>
+                `;
+            }
+            document.getElementById("quick-months-body").innerHTML = quickHtml;
+        }
+
+        // Start de pagina op met de juiste ploeg uit de URL (of standaard C)
+        selectTeam(detectTeamFromUrl(), false);
+    </script>
+</body>
+</html>

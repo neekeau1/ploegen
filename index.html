@@ -13,13 +13,32 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            <body>
-    <noscript>
-        <p style="color: red; text-align: center; padding: 20px; font-weight: bold;">
-            Let op: De standaard Android HTML Viewer blokkeert JavaScript voor losse bestanden. 
-            Open dit bestand in de gebouwde APK-app om het rooster te laden!
-        </p>
-    </noscript>
+        }
+        /* Ploeg knoppen A t/m E */
+        .team-selector {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 460px;
+            margin-bottom: 12px;
+            gap: 6px;
+        }
+        .team-btn {
+            flex: 1;
+            padding: 10px 0;
+            font-size: 15px;
+            font-weight: bold;
+            background-color: #ffffff;
+            color: #2c3e50;
+            border: 2px solid #2c3e50;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .team-btn.active {
+            background-color: #2c3e50;
+            color: #ffffff;
         }
         table {
             border-collapse: collapse;
@@ -86,6 +105,14 @@
 </head>
 <body>
 
+    <div class="team-selector">
+        <button class="team-btn" id="btn-A" onclick="selectTeam('A', true)">Ploeg A</button>
+        <button class="team-btn" id="btn-B" onclick="selectTeam('B', true)">Ploeg B</button>
+        <button class="team-btn" id="btn-C" onclick="selectTeam('C', true)">Ploeg C</button>
+        <button class="team-btn" id="btn-D" onclick="selectTeam('D', true)">Ploeg D</button>
+        <button class="team-btn" id="btn-E" onclick="selectTeam('E', true)">Ploeg E</button>
+    </div>
+
     <table id="calendar-table">
         <thead>
             <tr id="header-nav"></tr>
@@ -101,15 +128,24 @@
     </table>
 
     <script>
-        // Rooster configuratie uit jouw URL: s=O,O,M,M,N,N,,,, & d=09/05/2011
         const shifts = [
             "ochtend", "ochtend", 
             "middag", "middag", 
             "nacht", "nacht", 
             "vrij", "vrij", "vrij", "vrij"
         ];
-        // 9 mei 2011 (maand is 0-indexed in JS, dus 4 = mei)
-        const baseDateUTC = Date.UTC(2011, 4, 9);
+
+        // Gecorrigeerde startdatums 1e ochtenddienst in oktober 2026 (maand 9 = oktober)
+        const teamBaseDates = {
+            'E': Date.UTC(2026, 9, 1),  // 1 oktober 2026
+            'A': Date.UTC(2026, 9, 3),  // 3 oktober 2026
+            'B': Date.UTC(2026, 9, 5),  // 5 oktober 2026
+            'C': Date.UTC(2026, 9, 7),  // 7 oktober 2026 (Standaard)
+            'D': Date.UTC(2026, 9, 9)   // 9 oktober 2026
+        };
+
+        let currentTeam = 'C'; // Standaard op Ploeg C
+        let currentOffset = 0;
 
         const monthNames = [
             "januari", "februari", "maart", "april", "mei", "juni",
@@ -119,7 +155,36 @@
             "zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"
         ];
 
-        let currentOffset = 0;
+        // Controleer bij het laden of er /A, /B, /C, /D of /E in de URL staat
+        function detectTeamFromUrl() {
+            const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toUpperCase();
+            const hash = window.location.hash.replace('#', '').toUpperCase();
+            const query = window.location.search.replace('?', '').toUpperCase();
+
+            // Check het laatste stukje van het pad (bijv. domein.nl/A)
+            const pathParts = path.split('/');
+            const lastPart = pathParts[pathParts.length - 1];
+
+            if (teamBaseDates[lastPart]) return lastPart;
+            if (teamBaseDates[hash]) return hash;
+            if (teamBaseDates[query]) return query;
+            return 'C'; // Geen letter in de URL? Dan altijd Ploeg C!
+        }
+
+        function selectTeam(team, updateUrl = false) {
+            currentTeam = team;
+            document.querySelectorAll('.team-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + team).classList.add('active');
+            document.title = `Ploegenrooster - Ploeg ${team}`;
+
+            // Werk de URL netjes bij naar /A, /B, etc. (en naar / voor standaard Ploeg C)
+            if (updateUrl && window.location.protocol.startsWith('http')) {
+                const newPath = (team === 'C') ? '/' : '/' + team;
+                window.history.replaceState({ team: team }, '', newPath);
+            }
+
+            renderCalendar();
+        }
 
         function changeMonth(delta) {
             currentOffset += delta;
@@ -135,6 +200,7 @@
 
         function getShift(year, month, day) {
             const targetUTC = Date.UTC(year, month, day);
+            const baseDateUTC = teamBaseDates[currentTeam];
             const diffDays = Math.round((targetUTC - baseDateUTC) / (1000 * 60 * 60 * 24));
             const index = ((diffDays % shifts.length) + shifts.length) % shifts.length;
             return shifts[index];
@@ -150,7 +216,7 @@
                 <th colspan="2">
                     <a onclick="changeMonth(-12)">&lt;&lt;</a>
                     <a onclick="changeMonth(-1)">&lt;</a>
-                    <a onclick="resetMonth()">${monthNames[month]} ${year}</a>
+                    <a onclick="resetMonth()">${monthNames[month]} ${year} (Ploeg ${currentTeam})</a>
                     <a onclick="changeMonth(1)">&gt;</a>
                     <a onclick="changeMonth(12)">&gt;&gt;</a>
                 </th>
@@ -181,7 +247,6 @@
             }
             document.getElementById("calendar-body").innerHTML = bodyHtml;
 
-            // Snelkoppelingen voor de komende 12 maanden onderaan (net als op de site)
             let quickHtml = "";
             for (let i = 1; i <= 6; i++) {
                 const leftDate = new Date(year, month + i, 1);
@@ -197,7 +262,8 @@
             document.getElementById("quick-months-body").innerHTML = quickHtml;
         }
 
-        renderCalendar();
+        // Start de pagina op met de juiste ploeg uit de URL (of standaard C)
+        selectTeam(detectTeamFromUrl(), false);
     </script>
 </body>
 </html>
