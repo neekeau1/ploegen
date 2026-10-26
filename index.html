@@ -63,7 +63,6 @@
             transition: background-color 0.2s, color 0.2s;
         }
 
-        /* Header */
         .top-bar {
             display: flex;
             justify-content: space-between;
@@ -92,7 +91,6 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        /* Ploeg selectie */
         .team-selector {
             display: flex;
             justify-content: space-between;
@@ -128,7 +126,6 @@
             background-color: #3b536b;
         }
 
-        /* Statistieken, Aftelklok & Info-paneel */
         .info-wrapper {
             width: 100%;
             max-width: 460px;
@@ -145,13 +142,7 @@
             color: var(--muted-text);
             padding: 2px 4px;
             gap: 6px;
-        }
-
-        .countdown-bar {
-            width: 100%;
-            font-size: 12px;
-            color: var(--muted-text);
-            padding: 0 4px 2px 4px;
+            flex-wrap: wrap;
         }
 
         .info-toggle {
@@ -192,7 +183,6 @@
             margin-bottom: 0;
         }
 
-        /* Kalendertabel */
         table {
             border-collapse: collapse;
             width: 100%;
@@ -393,7 +383,6 @@
             text-align: center;
         }
 
-        /* Dialoogvenster voor aantekeningen */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -459,7 +448,6 @@
             gap: 8px;
         }
 
-        /* Alleen zichtbaar voor schermlezers zoals TalkBack */
         .sr-only {
             position: absolute;
             width: 1px;
@@ -492,9 +480,9 @@
     <section class="info-wrapper" aria-label="Statistieken en informatie">
         <div class="stats-bar">
             <span id="stats-summary"></span>
+            <span id="countdown-text" aria-live="polite"></span>
             <button class="info-toggle" id="info-btn" onclick="toggleInfoFlyout()" aria-expanded="false" aria-controls="info-flyout" aria-label="Open informatie en privacyverklaring">Info</button>
         </div>
-        <div class="countdown-bar" id="countdown-text" aria-live="polite"></div>
         <div class="info-flyout" id="info-flyout" role="region" aria-label="Informatie en privacy">
             <p id="flyout-year-stats"></p>
             <p><strong>Bediening:</strong> Tik op een dag in het rooster om te zien welke dienst alle andere ploegen die dag hebben. Gebruik de <strong>+</strong> knop achter een datum om verlof, overwerk, een dienst-ruil of een notitie toe te voegen.</p>
@@ -553,11 +541,11 @@
             "vrij", "vrij", "vrij", "vrij"
         ];
 
-        // Diensttijden voor de aftelklok (Ochtend: 06-14u, Middag: 14-22u, Nacht: 22-06u)
+        // Diensttijden: 06:30-14:30, 14:30-22:30 en 22:30-06:30
         const SHIFT_HOURS = {
-            ochtend: { start: 6, duration: 8 },
-            middag:  { start: 14, duration: 8 },
-            nacht:   { start: 22, duration: 8 }
+            ochtend: { startHour: 6, startMin: 30, durationHours: 8 },
+            middag:  { startHour: 14, startMin: 30, durationHours: 8 },
+            nacht:   { startHour: 22, startMin: 30, durationHours: 8 }
         };
 
         const teamBaseDates = {
@@ -581,7 +569,6 @@
         let activeModalDateKey = null;
         let selectedNoteType = '';
 
-        // Thema-instellingen
         function initTheme() {
             const saved = localStorage.getItem('nikolai_theme');
             if (saved === 'dark') {
@@ -604,7 +591,6 @@
             btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         }
 
-        // Ploegselectie en URL-herkenning
         function detectTeamFromUrl() {
             const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toUpperCase();
             const hash = window.location.hash.replace('#', '').toUpperCase();
@@ -635,7 +621,6 @@
             updateCountdown();
         }
 
-        // Dienstberekening
         function getShiftForTeam(team, year, month, day) {
             const targetUTC = Date.UTC(year, month, day);
             const baseDateUTC = teamBaseDates[team];
@@ -660,13 +645,12 @@
                 const day = d.getDate();
                 const dateKey = `${y}-${m}-${day}`;
 
-                // Sla de dienst over als deze dag als verlof is gemarkeerd
                 if (notes[dateKey] && notes[dateKey].type === 'verlof') continue;
 
                 const shift = getShiftForTeam(currentTeam, y, m, day);
                 if (SHIFT_HOURS[shift]) {
-                    const start = new Date(y, m, day, SHIFT_HOURS[shift].start, 0, 0);
-                    const end = new Date(start.getTime() + SHIFT_HOURS[shift].duration * 3600000);
+                    const start = new Date(y, m, day, SHIFT_HOURS[shift].startHour, SHIFT_HOURS[shift].startMin, 0);
+                    const end = new Date(start.getTime() + SHIFT_HOURS[shift].durationHours * 3600000);
                     intervals.push({ start, end });
                 }
             }
@@ -692,21 +676,12 @@
             }
 
             const totalMinutes = Math.max(1, Math.ceil((targetTime - now) / 60000));
-            const days = Math.floor(totalMinutes / (60 * 24));
-            const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+            const totalHours = Math.floor(totalMinutes / 60);
             const mins = totalMinutes % 60;
 
-            let timeString = '';
-            if (days > 0) {
-                timeString = `${days} ${days === 1 ? 'dag' : 'dagen'}, ${hours} uur en ${mins} minuten`;
-            } else {
-                timeString = `${hours} uur en ${mins} minuten`;
-            }
-
-            el.innerHTML = `${statusLabel} <strong>${timeString}</strong>`;
+            el.innerHTML = `${statusLabel} <strong>${totalHours} uur en ${mins} min</strong>`;
         }
 
-        // ISO-weeknummer
         function getISOWeek(y, m, d) {
             const date = new Date(Date.UTC(y, m, d));
             const dayNum = date.getUTCDay() || 7;
@@ -715,7 +690,6 @@
             return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
         }
 
-        // Nederlandse feestdagen
         const holidayCache = {};
         function getHolidaysForYear(year) {
             if (holidayCache[year]) return holidayCache[year];
@@ -761,7 +735,6 @@
             return map;
         }
 
-        // Beheer van lokale notities en verlof
         function getNotes() {
             try {
                 return JSON.parse(localStorage.getItem('nikolai_notes') || '{}');
@@ -838,7 +811,6 @@
             window.scrollTo(0, 0);
         }
 
-        // Opbouw van de kalender
         function renderCalendar() {
             const now = new Date();
             const targetDate = new Date(now.getFullYear(), now.getMonth() + currentOffset, 1);
@@ -893,7 +865,7 @@
 
                 let weekBadge = "";
                 if (dayOfWeek === 1 || day === 1) {
-                    weekBadge = `<span class="badge" aria-hidden="true">Week ${getISOWeek(year, month, day)}</span>`;
+                    weekBadge = `<span class="badge" aria-hidden="true">Week${getISOWeek(year, month, day)}</span>`;
                 }
 
                 let holidayBadge = "";
@@ -911,7 +883,6 @@
                     srNoteText = `, ${label}`;
                 }
 
-                // Schermlezer-tekst (TalkBack): bij Ploeg C specifiek "Nikolai heeft ..." voorlezen
                 let srShiftPhrase = "";
                 if (currentTeam === 'C') {
                     if (notes[dateKey] && notes[dateKey].type === 'verlof') {
@@ -983,7 +954,6 @@
             document.getElementById("quick-months-body").innerHTML = quickHtml;
         }
 
-        // Agenda-export (.ics)
         function exportICS(scope) {
             const now = new Date();
             const targetDate = new Date(now.getFullYear(), now.getMonth() + currentOffset, 1);
@@ -1031,7 +1001,6 @@
             link.click();
         }
 
-        // Veegnavigatie voor touchscreens
         let touchStartX = 0;
         let touchStartY = 0;
         const tableEl = document.getElementById('calendar-table');
@@ -1049,7 +1018,6 @@
             }
         }, { passive: true });
 
-        // Offline Service Worker registratie
         if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
